@@ -19,6 +19,12 @@ done
 
 rm -rf "${PROJECT_ROOT}/locks/06_imputation.lock"
 
+# The first instance needs real work to do, or it finishes (and releases
+# the lock) before this script can even observe it holding the lock -- so
+# reset imputation state, same as script_10, instead of reusing a
+# previous run's already-complete output.
+rm -rf "${IMPUTATION_DIR}/windows" "$IMPUTED_VCF" "${IMPUTED_VCF}.tbi" "${IMPUTED_VCF}.done"
+
 FIRST_LOG="${TEST_LOCK_DIR}/first_instance.log"
 SECOND_LOG="${TEST_LOCK_DIR}/second_instance.log"
 
