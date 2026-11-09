@@ -26,14 +26,26 @@ check_bgzip_integrity() {
         || die "$EXIT_CORRUPT_INPUT" "VCF failed bgzip integrity test (truncated or corrupt): $VCF"
 }
 
+check_sample_ids_unique() {
+    # htslib itself refuses to even build a header object for a VCF with
+    # duplicate sample names (bcf_hdr_add_sample_len aborts the parse), so
+    # this must run before any bcftools call touches the file, and it reads
+    # the #CHROM line directly (zcat+awk) rather than via bcftools.
+    log_step "Check 2/6: sample IDs are unique"
+    local dups
+    dups="$(run_container 1 1 "zcat '$VCF' | awk '/^#CHROM/{for(i=10;i<=NF;i++) print \$i; exit}' | sort | uniq -d" 2>>"$LOG_FILE")"
+    [[ -z "$dups" ]] \
+        || die "$EXIT_DUPLICATE_SAMPLE_ID" "Duplicate sample ID(s) found in $VCF: $dups"
+}
+
 check_vcf_parses() {
-    log_step "Check 2/6: VCF parses fully"
+    log_step "Check 3/6: VCF parses fully"
     run_container "$THREADS_BCFTOOLS" 2 "bcftools view -H '$VCF' > /dev/null" >> "$LOG_FILE" 2>&1 \
         || die "$EXIT_CORRUPT_INPUT" "VCF could not be parsed by bcftools (malformed records): $VCF"
 }
 
 check_index_valid() {
-    log_step "Check 3/6: index present and valid"
+    log_step "Check 4/6: index present and valid"
     [[ -f "${VCF}.tbi" || -f "${VCF}.csi" ]] \
         || die "$EXIT_MISSING_OR_INVALID_INDEX" "No .tbi/.csi index found next to $VCF"
     run_container 1 1 "bcftools index -s '$VCF' > /dev/null" >> "$LOG_FILE" 2>&1 \
@@ -41,7 +53,7 @@ check_index_valid() {
 }
 
 check_chrom_naming() {
-    log_step "Check 4/6: chromosome naming consistency (VCF vs. FASTA vs. config)"
+    log_step "Check 5/6: chromosome naming consistency (VCF vs. FASTA vs. config)"
     local vcf_chroms fasta_chrom
     vcf_chroms="$(run_container 1 1 "tabix -l '$VCF'" 2>>"$LOG_FILE")"
     [[ "$vcf_chroms" == "$CHROM" ]] \
@@ -52,25 +64,17 @@ check_chrom_naming() {
 }
 
 check_ref_matches_fasta() {
-    log_step "Check 5/6: REF alleles match the GRCh38 FASTA"
+    log_step "Check 6/6: REF alleles match the GRCh38 FASTA"
     run_container "$THREADS_BCFTOOLS" 2 "bcftools norm --check-ref e -f '$FASTA' '$VCF' -Ou -o /dev/null" >> "$LOG_FILE" 2>&1 \
         || die "$EXIT_REF_MISMATCH" "One or more REF alleles do not match the GRCh38 FASTA: $VCF"
 }
 
-check_sample_ids_unique() {
-    log_step "Check 6/6: sample IDs are unique"
-    local dups
-    dups="$(run_container 1 1 "bcftools query -l '$VCF' | sort | uniq -d" 2>>"$LOG_FILE")"
-    [[ -z "$dups" ]] \
-        || die "$EXIT_DUPLICATE_SAMPLE_ID" "Duplicate sample ID(s) found in $VCF: $dups"
-}
-
 check_bgzip_integrity
+check_sample_ids_unique
 check_vcf_parses
 check_index_valid
 check_chrom_naming
 check_ref_matches_fasta
-check_sample_ids_unique
 
 manifest_step_end "completed" 0 \
     "$(files_to_json_array "$VCF" "${VCF}.tbi" "$FASTA" "${FASTA}.fai")" \

@@ -37,8 +37,10 @@ FAIL_COUNT=0
 run_case() {
     local name="$1" fixture="$2" fasta="$3" expected_code="$4"
     log_step "Case [$name]: expecting exit code $expected_code"
-    bash "${SCRIPT_DIR}/script_2_validate_inputs.sh" "$fixture" "$fasta" >> "$LOG_FILE" 2>&1
-    local actual_code=$?
+    # lib/common_functions.sh sets -e, so the fixture's expected failure must
+    # sit on the left of || or it would kill this script, not just the case.
+    local actual_code=0
+    bash "${SCRIPT_DIR}/script_2_validate_inputs.sh" "$fixture" "$fasta" >> "$LOG_FILE" 2>&1 || actual_code=$?
     if [[ "$actual_code" -eq "$expected_code" ]]; then
         log_step "Case [$name]: PASS (rejected with exit $actual_code as expected)"
         RESULTS["$name"]="PASS (exit $actual_code)"

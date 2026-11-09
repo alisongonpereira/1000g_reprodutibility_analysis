@@ -46,7 +46,7 @@ log_step "Window 0 completed after ${waited}s; killing script_6 now to simulate 
 kill -9 -- -"$SCRIPT6_PID" 2>/dev/null || true
 docker ps -q --filter "ancestor=${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}" 2>/dev/null | xargs -r docker kill >/dev/null 2>&1 || true
 sleep 2
-wait "$SCRIPT6_PID" 2>/dev/null
+wait "$SCRIPT6_PID" 2>/dev/null || true
 rm -f "${PROJECT_ROOT}/locks/06_imputation.lock" -r
 
 log_step "State right after the simulated crash:"
@@ -58,8 +58,8 @@ fi
 
 RESUME_LOG="${TEST_RESUME_DIR}/second_run_after_resume.log"
 log_step "Resuming: re-running script_6_run_imputation.sh to completion"
-bash "${SCRIPT_DIR}/script_6_run_imputation.sh" > "$RESUME_LOG" 2>&1
-resume_exit=$?
+resume_exit=0
+bash "${SCRIPT_DIR}/script_6_run_imputation.sh" > "$RESUME_LOG" 2>&1 || resume_exit=$?
 [[ "$resume_exit" -eq 0 ]] || die "$EXIT_GENERIC_ERROR" "Resumed script_6 run failed (exit $resume_exit); see $RESUME_LOG"
 
 if grep -q "Window 0 .*already complete and verified, skipping" "$RESUME_LOG"; then
