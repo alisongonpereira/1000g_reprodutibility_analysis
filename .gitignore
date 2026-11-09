@@ -1,0 +1,17 @@
+# Generated outputs (downloaded data, derived VCFs, logs, manifest, locks).
+# Everything here is reproducible by running scripts/script_0.. onward;
+# none of it belongs in version control (the VCF/FASTA alone are ~800MB).
+/01_download/
+/02_validation/
+/03_sample_selection/
+/04_target_masked/
+/05_reference_panel/
+/06_imputation/
+/07_metrics/
+/08_verdict/
+/09_test_validation/
+/10_test_resume/
+/11_test_lock/
+/manifest/
+/logs/
+/locks/

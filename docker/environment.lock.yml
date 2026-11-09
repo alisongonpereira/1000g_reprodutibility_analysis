@@ -1,0 +1,11 @@
+name: demo
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - bcftools=1.25=h118bc1c_1
+  - samtools=1.25=h9dcdb79_0
+  - htslib=1.25=ha79157c_0
+  - beagle=5.5_27Feb25.75f=hdfd78af_0
+  - openjdk=17.0.18=h1602c4f_18
+  - jq=1.8.2=h280c20c_1

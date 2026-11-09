@@ -1,0 +1,63 @@
+{
+  "declared_before_execution": true,
+  "declared_at": "2026-11-09",
+  "chromosome": "chr20",
+  "criteria": [
+    {
+      "id": "r2_overall",
+      "description": "Aggregate dosage r-squared across all target samples and variants",
+      "metric": "dosage_r2_overall",
+      "operator": ">=",
+      "threshold": 0.80
+    },
+    {
+      "id": "r2_maf_rare",
+      "description": "Dosage r-squared restricted to MAF < 1%",
+      "metric": "dosage_r2_maf_lt_0_01",
+      "operator": ">=",
+      "threshold": 0.30
+    },
+    {
+      "id": "r2_maf_low",
+      "description": "Dosage r-squared restricted to 1% <= MAF < 5%",
+      "metric": "dosage_r2_maf_0_01_0_05",
+      "operator": ">=",
+      "threshold": 0.60
+    },
+    {
+      "id": "r2_maf_common",
+      "description": "Dosage r-squared restricted to MAF >= 5%",
+      "metric": "dosage_r2_maf_gte_0.05",
+      "operator": ">=",
+      "threshold": 0.90
+    },
+    {
+      "id": "concordance_overall",
+      "description": "Non-reference genotype concordance across all target samples and variants",
+      "metric": "nonref_genotype_concordance_overall",
+      "operator": ">=",
+      "threshold": 0.95
+    },
+    {
+      "id": "variant_count_retained",
+      "description": "Imputed VCF must carry every variant present in the reference panel (no silent site loss)",
+      "metric": "imputed_variant_count",
+      "operator": "==",
+      "compare_to_metric": "reference_panel_variant_count"
+    },
+    {
+      "id": "sample_count",
+      "description": "Imputed VCF must contain exactly the target sample set",
+      "metric": "imputed_sample_count",
+      "operator": "==",
+      "threshold": 25
+    },
+    {
+      "id": "all_steps_completed",
+      "description": "Every pipeline step recorded in the manifest finished with status completed",
+      "metric": "manifest_all_steps_completed",
+      "operator": "==",
+      "threshold": true
+    }
+  ]
+}
