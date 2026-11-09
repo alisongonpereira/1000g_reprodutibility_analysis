@@ -27,7 +27,7 @@
     {
       "id": "r2_maf_common",
       "description": "Dosage r-squared restricted to MAF >= 5%",
-      "metric": "dosage_r2_maf_gte_0.05",
+      "metric": "dosage_r2_maf_gte_0_05",
       "operator": ">=",
       "threshold": 0.90
     },
