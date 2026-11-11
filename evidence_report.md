@@ -121,6 +121,21 @@ script_10: window0_skipped_on_resume=true, later_window_recomputed=true, waited_
 script_11: second_instance_exit_code=30, expected_exit_code=30
 ```
 
+## Post-report change: statistics moved from awk to R
+
+After this report was first written, the Pearson r^2 / concordance
+computation in `script_7_compute_accuracy_metrics.sh` (previously a
+hand-accumulated formula in awk) was replaced with
+`scripts/compute_accuracy_stats.R`, run inside a second, separately-pinned
+conda env (`docker/environment.rstats.lock.yml`, R 4.6.2) added to the same
+image. bcftools and awk still do all VCF access and GT/GP-to-number
+reshaping; only the actual statistics moved. Re-run against the same real
+`07_metrics/.joined.tsv` this report's numbers came from --
+`bash scripts/script_7_compute_accuracy_metrics.sh` then
+`bash scripts/script_8_verify_acceptance.sh` -- produced byte-identical
+output to every number in "Numbers verified" above, including the FAIL
+verdict on the same two criteria. See `git log` for the commit.
+
 ## Known caveats of this specific run
 
 - `bochet.gcc.biostat.washington.edu` (Beagle's genetic maps) omits its TLS

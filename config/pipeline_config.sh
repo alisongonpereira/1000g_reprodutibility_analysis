@@ -24,6 +24,7 @@ ARRAY_THIN_SPACING_BP=1500          # ~ Omni2.5 genome-wide average marker spaci
 THREADS_DOWNLOAD=4
 THREADS_BCFTOOLS=4
 THREADS_BEAGLE=4
+RSTATS_MEM_GB=8                     # base R's read.table holds the ~1.6M-row metrics table in memory several times over
 BEAGLE_HEAP_GB=8                    # -> java -Xmx${BEAGLE_HEAP_GB}g
 N_IMPUTATION_WINDOWS=5               # chr20 split into this many idempotent windows
 

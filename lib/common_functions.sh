@@ -190,6 +190,7 @@ container_tool_version() {
         tabix)    run_container 1 1 "tabix --version 2>/dev/null | head -1" ;;
         bgzip)    run_container 1 1 "bgzip --version 2>/dev/null | head -1" ;;
         java)     run_container 1 1 "java -version 2>&1 | head -1" ;;
+        r)        run_container 1 1 "Rscript --version 2>&1 | head -1" ;;
         beagle)   run_container 1 1 'java -jar "$BEAGLE_JAR" 2>&1 | grep -im1 beagle' ;;
         *) echo "unknown" ;;
     esac

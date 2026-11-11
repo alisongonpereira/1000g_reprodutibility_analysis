@@ -1,0 +1,5 @@
+name: rstats
+channels:
+  - conda-forge
+dependencies:
+  - r-base=4.6.2=h8ceae2c_2

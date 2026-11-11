@@ -4,6 +4,10 @@
 # reference-panel MAF bin. Metrics are restricted to biallelic SNVs (the
 # same site class the array mask uses), computed from GT (truth, imputed
 # best-guess) and GP (imputed dosage = P(het) + 2*P(hom-alt)).
+# bcftools extracts the data and awk reshapes GT/GP strings into numbers
+# (file-format handling); the actual statistics (Pearson r^2, concordance)
+# are computed by scripts/compute_accuracy_stats.R, not accumulated by
+# hand in awk -- see README "Why R for one step".
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -89,42 +93,8 @@ n_joined_sites=$(wc -l < "${WORK}/.joined.tsv")
 [[ "$n_joined_sites" -gt 0 ]] || die "$EXIT_GENERIC_ERROR" "No sites survived the truth/imputed/MAF join; cannot compute metrics"
 log_step "$n_joined_sites sites available for metrics"
 
-awk -F'\t' -v maf_low="$ARRAY_MAF_MIN" '
-function r2(n, sx, sy, sx2, sy2, sxy) {
-    if (n < 2) return -1
-    denom = (n*sx2 - sx*sx) * (n*sy2 - sy*sy)
-    if (denom <= 0) return -1
-    r = (n*sxy - sx*sy) / sqrt(denom)
-    return r*r
-}
-{
-    maf = $2
-    n_samples = (NF - 2) / 3
-    bin = (maf < 0.01) ? "rare" : (maf < maf_low ? "low" : "common")
-    for (j = 1; j <= n_samples; j++) {
-        tc = $(2 + j)
-        gtc = $(2 + n_samples + (j-1)*2 + 1)
-        dos = $(2 + n_samples + (j-1)*2 + 2)
-        if (tc == -1 || dos == -1) continue
-
-        n_all++; sx_all += tc; sy_all += dos; sx2_all += tc*tc; sy2_all += dos*dos; sxy_all += tc*dos
-        n_bin[bin]++; sx_bin[bin] += tc; sy_bin[bin] += dos; sx2_bin[bin] += tc*tc; sy2_bin[bin] += dos*dos; sxy_bin[bin] += tc*dos
-
-        if (tc != 0) {
-            nonref_total_all++
-            if (gtc == tc) nonref_match_all++
-        }
-    }
-}
-END {
-    printf "overall_r2=%.6f\n", r2(n_all, sx_all, sy_all, sx2_all, sy2_all, sxy_all)
-    printf "rare_r2=%.6f\n",    r2(n_bin["rare"], sx_bin["rare"], sy_bin["rare"], sx2_bin["rare"], sy2_bin["rare"], sxy_bin["rare"])
-    printf "low_r2=%.6f\n",     r2(n_bin["low"], sx_bin["low"], sy_bin["low"], sx2_bin["low"], sy2_bin["low"], sxy_bin["low"])
-    printf "common_r2=%.6f\n",  r2(n_bin["common"], sx_bin["common"], sy_bin["common"], sx2_bin["common"], sy2_bin["common"], sxy_bin["common"])
-    printf "nonref_concordance=%.6f\n", (nonref_total_all > 0 ? nonref_match_all / nonref_total_all : -1)
-    printf "n_genotype_pairs=%d\n", n_all
-    printf "n_nonref_truth_calls=%d\n", nonref_total_all
-}' "${WORK}/.joined.tsv" > "${WORK}/.stats.txt"
+run_container 1 "$RSTATS_MEM_GB" "Rscript '${SCRIPT_DIR}/compute_accuracy_stats.R' '${WORK}/.joined.tsv' '$ARRAY_MAF_MIN'" \
+    > "${WORK}/.stats.txt" 2>>"$LOG_FILE"
 
 cat "${WORK}/.stats.txt" >> "$LOG_FILE"
 
@@ -152,7 +122,7 @@ mark_step_output_done "$METRICS_FILE"
 manifest_step_end "completed" 0 \
     "$(files_to_json_array "$IMPUTED_VCF" "$TARGET_TRUTH_VCF" "$REFERENCE_PANEL_VCF")" \
     "$(files_to_json_array "$METRICS_FILE")" \
-    "$(container_tool_versions_json bcftools)" \
+    "$(container_tool_versions_json bcftools r)" \
     "{\"n_joined_sites\":${n_joined_sites}}"
 
 log_step "Accuracy metrics computed: $(cat "$METRICS_FILE")"

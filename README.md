@@ -51,11 +51,36 @@ act on, not as an imputation-accuracy benchmark in its own right.
   windows (so the failure/resume test has real, separately-checkpointed
   units of work, not just one monolithic job).
 
+### Why R for one step
+
+Everything in this pipeline is bash + bcftools/awk, on purpose (see
+"Environment" below) -- with one exception: the actual statistics in
+`scripts/script_7_compute_accuracy_metrics.sh` (Pearson r^2 by MAF bin,
+non-reference concordance) are computed by
+`scripts/compute_accuracy_stats.R`, not accumulated by hand with running
+sums in awk. bcftools still does all VCF access, and awk still reshapes
+GT/GP strings into plain numbers -- that's file-format handling, not
+statistics, and awk is a reasonable tool for it. But a Pearson correlation
+is exactly the kind of thing a real stats runtime should compute, not
+something to re-derive from the `(n*sxy - sx*sy) / sqrt(...)` formula by
+hand. R runs in its own conda env inside the same image (see below), so
+this didn't cost the pipeline a second container or a second dependency
+story. Both implementations were cross-checked against the same real data
+and produced identical results (`git log` has the commit).
+
 ## Environment
 
 One pinned Docker image (`docker/Dockerfile` + `docker/environment.lock.yml`,
 exact `name=version=build` pins for bcftools, samtools, htslib, Beagle and
-OpenJDK via conda-forge/bioconda) provides every bioinformatics tool.
+OpenJDK via conda-forge/bioconda, plus `docker/environment.rstats.lock.yml`
+pinning R 4.6.2 in its own conda env) provides every tool the pipeline uses.
+R sits in a separate env from the rest because its conda-forge build needs
+`icu`/`libdeflate`/`gsl` versions that conflict with the pinned
+bcftools/samtools/htslib builds -- solving it on its own avoids re-pinning
+already-verified tools just to fit a statistics runtime next to them; both
+envs' `bin/` directories are on `PATH`; `run_container` is unaffected since
+it is the container's resource limits that are declared, not which env a
+given tool comes from (see `RSTATS_MEM_GB` in `config/pipeline_config.sh`).
 Docker was chosen over a bare conda/mamba install because it also pins the
 OS layer, and over Apptainer/Singularity only because Docker is what this
 demo's own test environment had available; the image is standard OCI, so it
@@ -99,9 +124,10 @@ done
 
 Every script is idempotent: re-running the same command after it already
 succeeded re-verifies checksums and skips completed steps instead of
-redoing them. Expected wall-clock time on a 4-8 core laptop: a few minutes
-for the download (network-dependent) plus roughly 1-3 hours for the
-imputation step, depending on CPU.
+redoing them. Measured on the real run this repository's evidence comes
+from (4 cores, Beagle on 4 threads): a few minutes for the download
+(network-dependent, ~800 MB) and 3m25s for the imputation step itself
+across all 5 windows -- see `evidence_report.md` for the exact timestamps.
 
 ### Expected output
 
